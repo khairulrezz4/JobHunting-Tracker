@@ -189,6 +189,10 @@ add_job() {
     
     log_action "Added job: ID=$id, Name=$job_name, Title=$job_title, Status=$status"
     echo "✓ Job added successfully (ID: $id)"
+    
+    # Auto-update Excel report
+    echo ""
+    auto_update_excel
 }
 
 ################################################################################
@@ -284,6 +288,10 @@ update_job_status() {
     mv "$tmpfile" "$JOBS_FILE"
     log_action "Updated Job ID=$job_id to Status=$new_status"
     echo "✓ Job status updated successfully"
+    
+    # Auto-update Excel report
+    echo ""
+    auto_update_excel
 }
 
 ################################################################################
@@ -334,10 +342,44 @@ delete_job() {
     mv "$tmpfile" "$JOBS_FILE"
     log_action "Deleted Job ID=$job_id"
     echo "✓ Job deleted successfully"
+    
+    # Auto-update Excel report
+    echo ""
+    auto_update_excel
 }
 
 ################################################################################
-# Generate Excel Report Function
+# Auto-Update Excel Report Function (Silent)
+################################################################################
+auto_update_excel() {
+    # Check if VBS script exists
+    if [[ ! -f "$EXCEL_SCRIPT" ]]; then
+        log_action "WARNING: Excel generation script not found"
+        return 1
+    fi
+    
+    # Check if there are any jobs
+    local line_count
+    line_count=$(wc -l < "$JOBS_FILE")
+    
+    if (( line_count <= 1 )); then
+        return 0
+    fi
+    
+    # Generate the Excel file using VBS (silent mode, no prompts)
+    local excel_output="${DATA_DIR}/Job_Tracker.xlsx"
+    
+    if cscript.exe "$EXCEL_SCRIPT" "$JOBS_FILE" "$excel_output" 2>/dev/null; then
+        log_action "Auto-updated Excel report: $excel_output"
+        echo "✓ Excel report updated automatically"
+    else
+        log_action "WARNING: Failed to auto-update Excel report"
+        return 1
+    fi
+}
+
+################################################################################
+# Generate Excel Report Function (Manual with options)
 ################################################################################
 generate_excel_report() {
     echo ""
